@@ -1,4 +1,3 @@
-const argv = require('yargs').argv;
 const url = require('url');
 const fs = require('fs');
 const test = require('./test');
