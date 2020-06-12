@@ -1,0 +1,13 @@
+{
+  "name": "support-performance",
+  "version": "1.0.0",
+  "description": "measure performnace using lighthouse",
+  "main": "index.js",
+  "author": "George Haberis",
+  "license": "MIT",
+  "devDependencies": {
+    "chrome-launcher": "^0.13.2",
+    "lighthouse": "^6.0.0",
+    "yargs": "^15.3.1"
+  }
+}
