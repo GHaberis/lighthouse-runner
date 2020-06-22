@@ -10,6 +10,19 @@ const createTestResultsDirectory = dirName => {
     }
 }
 
+const getMedian = arr => {
+    const mid = Math.floor(arr.length / 2);
+    const nums = [...arr].sort((a, b) => a - b);
+    return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+};
+
+const getMedianRunResults = runResults => Object.keys(runResults).reduce((acc, key) => {
+    return {
+        [key]: getMedian(runResults[key]),
+        ...acc
+    };
+}, {});
+
 const auditMetrics = [
     'speed-index',
     'total-blocking-time',
@@ -20,7 +33,7 @@ const auditMetrics = [
     // 'cumulative-layout-shift'
 ];
 
-const aggregateResultsPath = `results/results.json`;
+const medianResultsPath = `results/median-results.json`;
 
 // const dateToString = fetchTime => {
 //     const dateObj = fetchTime ? new Date(fetchTime) : new Date();
@@ -56,7 +69,7 @@ const aggregateResultsPath = `results/results.json`;
 //     }
 // }
 
-// AVERAGED RESULTS
+// MEDIAN RESULTS
 // {
 //     'uk-support': { // SITE ID
 //         '6173783': { // RUN ID
@@ -76,20 +89,16 @@ const aggregateResultsPath = `results/results.json`;
 //     }
 // }
 
-const saveTestResults = async (dirName, testResults) => {
-    // const runId = dateToString();
-    // const resultsFilePath = `results/${dirName}/results.json`;
-    // const aggregateResults = fs.existsSync(resultsFilePath) ? JSON.parse(fs.readFileSync(resultsFilePath)) : {};
-
+const saveTestResults = async (siteId, testResults) => {
     const runId = new Date().getTime();
-    const aggregateResults = fs.existsSync(aggregateResultsPath) ? JSON.parse(fs.readFileSync(aggregateResultsPath)) : {};
-    const averageResults =  auditMetrics.reduce((acc, metric) => {
+    const medianResults = fs.existsSync(medianResultsPath) ? JSON.parse(fs.readFileSync(medianResultsPath)) : {};
+    const runResults =  auditMetrics.reduce((acc, metric) => {
         return {
             ...acc,
             [metric]: []
         }
     }, {});
-    const runResultsDir = `${dirName}/${runId}`;
+    const runResultsDir = `${siteId}/${runId}`;
 
     createTestResultsDirectory(runResultsDir);
 
@@ -106,63 +115,11 @@ const saveTestResults = async (dirName, testResults) => {
                 numericValue
             } = parsedTestResult.audits[auditMetric];
 
-            averageResults[auditMetric].push(numericValue);
+            runResults[auditMetric].push(numericValue);
         });
 
-        // if (!aggregateResultsPath[dirName]) {
-        //     aggregateResultsPath[dirName] = {};
-        // }
-
-        // aggregateResultsPath[dirName][runId] = auditMetrics.reduce((acc, metric) =< {
-
-        // }, {}
-
-        // const parsedTestResult = JSON.parse(json);
-        // const fileName = `${dateToString(js.fetchTime)}.json`;
-
-        // auditMetrics.forEach(auditMetric => {
-        //     const {
-        //         description,
-        //         numericUnit,
-        //         numericValue
-        //     } = parsedTestResult.audits[auditMetric];
-
-        //     if (!aggregateResults[auditMetric]) {
-        //         aggregateResults[auditMetric] = {
-        //             runs: {
-        //                 [runId]: {
-        //                     results: [{
-        //                         fileName,
-        //                         numericValue
-        //                     }]
-        //                 }
-        //             },
-        //             numericUnit,
-        //             description
-        //         }
-        //     } else {
-        //         if (aggregateResults[auditMetric].runs[runId]) {
-        //             aggregateResults[auditMetric].runs[runId].results.push({
-        //                 fileName,
-        //                 numericValue
-        //             });
-        //         } else {
-        //             aggregateResults[auditMetric].runs[runId] = {
-        //                 results: [{
-        //                     fileName,
-        //                     numericValue
-        //                 }]
-        //             }
-        //         }
-        //     }
-
-        //     if (index === (testResults.length - 1)) {
-        //         aggregateResults[auditMetric].runs[runId].averageValue = parseInt(aggregateResults[auditMetric].runs[runId].results.reduce((acc, result) => acc + result.numericValue, 0) / testResults.length, 10)
-        //     }
-        // });
-
         await fs.writeFile(
-            `results/${dirName}/${runResultsDir}.json`,
+            `results/${runResultsDir}/${testId}.json`,
             json,
             err => {
                 if (err) throw err;
@@ -170,15 +127,21 @@ const saveTestResults = async (dirName, testResults) => {
         );
     }
 
-    console.log('averageResults', averageResults);
+    if (medianResults[siteId]) {
+        medianResults[siteId][runId] = getMedianRunResults(runResults);
+    } else {
+        medianResults[siteId] = {
+            [runId]: getMedianRunResults(runResults)
+        }
+    }
 
-    // return fs.writeFile(
-    //     resultsFilePath,
-    //     JSON.stringify(aggregateResults, null, 4),
-    //     err => {
-    //         if (err) throw err;
-    //     }
-    // );
+    return fs.writeFile(
+        medianResultsPath,
+        JSON.stringify(medianResults, null, 4),
+        err => {
+            if (err) throw err;
+        }
+    );
 }
 
 const init = async () => {
